@@ -1,0 +1,84 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    font-family: "IBM Plex Sans KR", "Noto Sans KR", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(180, 221, 202, 0.9), transparent 32%),
+      radial-gradient(circle at bottom right, rgba(239, 214, 170, 0.7), transparent 28%),
+      linear-gradient(135deg, #f8f4eb 0%, #eef7f0 55%, #f6ede3 100%);
+    color: #17332f;
+  }
+
+  * {
+    @apply border-slate-200;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-transparent text-ink antialiased;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  .shell-panel {
+    @apply rounded-[28px] border border-white/60 bg-white/75 shadow-panel backdrop-blur-xl;
+  }
+
+  .mesh-surface {
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(22, 163, 74, 0.08), transparent 24%),
+      radial-gradient(circle at 80% 0%, rgba(217, 119, 6, 0.12), transparent 20%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.7));
+  }
+
+  .soft-grid {
+    background-size: 24px 24px;
+    background-image:
+      linear-gradient(rgba(25, 92, 72, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(25, 92, 72, 0.08) 1px, transparent 1px);
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold tracking-[0.16em] uppercase;
+  }
+
+  .field-input {
+    @apply w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm text-ink outline-none transition focus:border-moss focus:ring-4 focus:ring-emerald-100;
+  }
+
+  .field-textarea {
+    @apply field-input min-h-[140px] resize-y leading-7;
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-moss disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-moss hover:text-moss disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .danger-button {
+    @apply inline-flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}

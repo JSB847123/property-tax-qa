@@ -1,0 +1,15 @@
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.pyc
+node_modules/
+frontend/dist/
+frontend/.env
+data/private/*
+!data/private/.gitkeep
+frontend/frontend_build_output.txt

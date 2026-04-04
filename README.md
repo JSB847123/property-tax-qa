@@ -19,8 +19,14 @@
 
 ## 빠른 시작
 ### 1. 백엔드 실행
+처음 받는 경우:
 ```powershell
-cd "D:\반종수\AI 관련\05. codex\업무도우미\tax-rag"
+git clone https://github.com/JSB847123/property-tax-qa.git
+cd property-tax-qa
+```
+
+이미 저장소 안에 있다면 프로젝트 루트에서 아래를 실행하세요.
+```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -29,8 +35,9 @@ uvicorn app.main:app --reload
 ```
 
 ### 2. 프론트 실행
+새 터미널에서 프로젝트 루트 기준으로 아래를 실행하세요.
 ```powershell
-cd "D:\반종수\AI 관련\05. codex\업무도우미\tax-rag\frontend"
+cd frontend
 Copy-Item .env.example .env
 npm install
 npm run dev

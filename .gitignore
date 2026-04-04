@@ -13,3 +13,8 @@ frontend/.env
 data/private/*
 !data/private/.gitkeep
 frontend/frontend_build_output.txt
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+frontend/.vite/

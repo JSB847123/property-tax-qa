@@ -35,6 +35,10 @@ export async function fetchDocuments({ category, search, page = 1, pageSize = 8 
   return request(`/api/documents?${params.toString()}`)
 }
 
+export async function fetchDocument(id) {
+  return request(`/api/documents/${id}`)
+}
+
 export async function createDocument(payload) {
   return request('/api/documents', {
     method: 'POST',

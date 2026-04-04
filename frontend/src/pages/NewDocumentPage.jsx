@@ -37,7 +37,7 @@ export default function NewDocumentPage() {
     <div className="space-y-4">
       <section className="shell-panel mesh-surface p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Document Intake</p>
-        <h2 className="mt-3 font-display text-4xl text-ink">새 실무자료를 체계적으로 등록합니다.</h2>
+        <h2 className="mt-3 font-pretendard text-4xl font-bold text-ink">새 실무자료를 체계적으로 등록합니다.</h2>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
           판단 기준, 민원 설명 논리, 전산 단계까지 한 번에 정리해 두면 이후 채팅 답변과 내부 검색 품질이 함께 좋아집니다.
         </p>

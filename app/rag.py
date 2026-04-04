@@ -34,7 +34,7 @@ SYSTEM_PROMPT = """
    - 🖥️ 전산 처리 방법 (전산적용 정보가 있는 경우)
    - 🗣️ 유사 민원 처리 사례 (민원처리 자료가 있는 경우)
 6. 답변 끝에 📌 참조 출처 요약
-7. 비공개자료는 "내부자료"로 표시, 공개자료는 판례번호/조문번호 표시
+7. 비공개자료는 "등록 자료"로 표시, 공개자료는 판례번호/조문번호 표시
 8. 전문가 상담 권고
 """.strip()
 
@@ -231,7 +231,7 @@ def _filter_and_sort_precedents(results: list[dict[str, Any]]) -> list[dict[str,
 
 def _private_context_block(item: dict[str, Any], index: int) -> str:
     lines = [
-        f"[비공개자료{index}] 분류: {_private_category_label(item.get('category'))} | 제목: {item.get('title') or '제목 없음'} | 출처: {item.get('source') or '내부자료'}",
+        f"[비공개자료{index}] 분류: {_private_category_label(item.get('category'))} | 제목: {item.get('title') or '제목 없음'} | 출처: {item.get('source') or '등록 자료'}",
         f"내용: {_truncate_text(item.get('content'), 1200)}",
     ]
     if item.get("practical"):
@@ -313,13 +313,14 @@ def _build_source_entry(item: dict[str, Any], index: int, *, visibility: str) ->
         return {
             "citation": f"[비공개자료{index}]",
             "visibility": "private",
-            "display_type": "내부자료",
+            "display_type": "등록 자료",
             "category": item.get("category"),
             "category_label": _private_category_label(item.get("category")),
             "title": item.get("title"),
-            "source": item.get("source") or "내부자료",
+            "source": item.get("source") or "등록 자료",
             "date": item.get("date"),
             "id": item.get("id"),
+            "summary": _truncate_text(item.get("content"), 220) if item.get("content") else None,
         }
 
     source_type = item.get("source_type")

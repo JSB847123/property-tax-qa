@@ -63,7 +63,7 @@ def normalize_favorite_source(source: Mapping[str, Any]) -> dict[str, Any]:
         "source_type": source_type,
         "is_private": is_private,
         "title": _as_text(source.get("title")) or ("제목 정보 없음" if is_private else "공개자료"),
-        "source": _as_text(source.get("source")) or ("내부자료" if is_private else "국가법령정보센터"),
+        "source": _as_text(source.get("source")) or ("등록 자료" if is_private else "국가법령정보센터"),
         "reference": _as_text(source.get("reference")) or None,
         "citation": _as_text(source.get("citation")) or None,
         "detail_link": _as_text(source.get("detail_link")) or None,

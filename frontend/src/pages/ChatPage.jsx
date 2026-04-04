@@ -3,7 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 
 import SourceCard from '../components/SourceCard'
 import { createFavorite, deleteFavorite, sendChat } from '../lib/api'
-import { loadRecentChatState, persistRecentChatState, trimRecentChatMessages } from '../lib/chatHistory'
+import { createWelcomeMessage, loadRecentChatState, persistRecentChatState, trimRecentChatMessages } from '../lib/chatHistory'
 
 const starterPrompts = [
   '사실상 취득의 판단 기준을 정리해줘.',
@@ -90,6 +90,7 @@ export default function ChatPage() {
     () => messages.filter((message) => message.role === 'assistant' && message.id !== 'welcome').length,
     [messages],
   )
+  const hasClearableContent = recentAnswerCount > 0 || Boolean(draft.trim())
 
   useEffect(() => {
     persistRecentChatState({ includePublic, messages })
@@ -183,15 +184,23 @@ export default function ChatPage() {
     )
   }
 
+  function handleClearChat() {
+    setDraft('')
+    setError('')
+    setFavoriteError('')
+    setFavoritePendingIds({})
+    setMessages([createWelcomeMessage()])
+  }
+
   return (
     <div className="space-y-4">
       <section className="shell-panel mesh-surface overflow-hidden p-6 sm:p-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Q&A Workspace</p>
-            <h2 className="mt-3 font-display text-4xl leading-tight text-ink sm:text-5xl">질문 하나로 실무 판단과 법적 근거를 함께 정리합니다.</h2>
+            <h2 className="mt-3 font-pretendard text-4xl font-bold leading-tight text-ink sm:text-5xl">취득세·재산세 실무 판단과 법적 근거를 한 곳에 모아보세요</h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              공개 법률 데이터와 내부자료를 결합해 답변하고, 민원처리 힌트와 전산적용 메모는 별도 섹션으로 분리해서 보여줍니다.
+              공개 법률 데이터와 등록 자료를 결합해 답변하고, 민원처리 힌트와 전산적용 메모는 별도 섹션으로 분리해서 보여줍니다.
             </p>
           </div>
 
@@ -215,6 +224,17 @@ export default function ChatPage() {
             <div className="rounded-[24px] border border-amber-200 bg-amber-50/80 px-5 py-4 shadow-panel">
               <div className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700/80">최근 기록 유지</div>
               <div className="mt-2 text-sm leading-6 text-slate-700">최근 질의응답 {recentAnswerCount}건을 저장해 두고, 다른 메뉴를 다녀와도 다시 보여줍니다.</div>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  className="secondary-button px-4 py-2"
+                  onClick={handleClearChat}
+                  disabled={submitting || !hasClearableContent}
+                >
+                  질문 clear
+                </button>
+                <p className="mt-2 text-xs leading-5 text-slate-500">즐겨찾기나 등록 자료는 그대로 두고, 이 화면의 질문과 답변만 정리합니다.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -321,7 +341,7 @@ export default function ChatPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-moss/70">답변 원칙</p>
             <h3 className="mt-2 text-2xl font-display text-ink">출처와 전산 메모를 분리해서 읽기</h3>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
-              <li>공개자료는 판례번호·조문번호 중심으로, 비공개자료는 내부자료 뱃지로 구분합니다.</li>
+              <li>공개자료는 판례번호·조문번호 중심으로, 비공개자료는 등록 자료 뱃지로 구분합니다.</li>
               <li>🖥️ 전산 처리 방법 섹션은 초록색 박스로 강조되어 실무 메모를 빠르게 확인할 수 있습니다.</li>
               <li>참조 출처는 처음 몇 개만 보이고, 더보기 버튼으로 같은 질문의 추가 자료를 계속 확인할 수 있습니다.</li>
               <li>마음에 드는 판례나 심판례는 카드 오른쪽 위 별표를 눌러 즐겨찾기(참조 출처)로 바로 모을 수 있습니다.</li>

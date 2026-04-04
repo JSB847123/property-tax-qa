@@ -1,3 +1,4 @@
+@import url("https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css");
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap");
 
 @tailwind base;
@@ -80,5 +81,11 @@
 
   .danger-button {
     @apply inline-flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
+@layer utilities {
+  .font-pretendard {
+    font-family: "Pretendard", "IBM Plex Sans KR", "Noto Sans KR", sans-serif;
   }
 }

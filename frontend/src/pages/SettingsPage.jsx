@@ -205,7 +205,7 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Connection Settings</p>
-            <h2 className="mt-3 font-display text-4xl leading-tight text-ink sm:text-5xl">답변 제공자와 외부검색 키를 화면에서 선택하고 바로 적용할 수 있습니다.</h2>
+            <h2 className="mt-3 font-pretendard text-4xl font-bold leading-tight text-ink sm:text-5xl">답변 제공자와 외부검색 키를 화면에서 선택하고 바로 적용할 수 있습니다.</h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
               Anthropic, OpenAI, Gemini, GLM 키를 저장하고 어떤 제공자로 최종 답변을 생성할지 선택할 수 있습니다. LAW_OC는 판례, 심판례, 법령 외부검색에 계속 사용됩니다.
             </p>

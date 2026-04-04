@@ -61,7 +61,7 @@ def _normalize_private_result(item: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": item.get("id"),
         "title": item.get("title") or "",
-        "source": item.get("source") or "내부자료",
+        "source": item.get("source") or "등록 자료",
         "category": item.get("category") or "",
         "is_private": True,
         "date": item.get("date"),

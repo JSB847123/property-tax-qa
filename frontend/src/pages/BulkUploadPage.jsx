@@ -86,7 +86,7 @@ export default function BulkUploadPage() {
     <div className="space-y-4">
       <section className="shell-panel mesh-surface p-6 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Bulk Import</p>
-        <h2 className="mt-3 font-display text-4xl text-ink">CSV와 Markdown을 미리 검토한 뒤 안전하게 일괄 등록합니다.</h2>
+        <h2 className="mt-3 font-pretendard text-4xl font-bold text-ink">CSV와 Markdown을 미리 검토한 뒤 안전하게 일괄 등록합니다.</h2>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
           업로드 전에 카테고리 매핑과 건수 분포를 먼저 확인하고, 이상이 없을 때만 서버에 반영하는 흐름입니다. Markdown은 문서 사이를 <code>---</code> 한 줄로 구분하면 여러 건을 한 번에 넣을 수 있습니다.
         </p>

@@ -151,7 +151,7 @@ export default function DocumentsPage() {
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Document Library</p>
-            <h2 className="mt-3 font-display text-4xl text-ink">등록 자료를 한 눈에 보고 바로 수정합니다.</h2>
+            <h2 className="mt-3 font-pretendard text-4xl font-bold text-ink">등록 자료를 한 눈에 보고 바로 수정합니다.</h2>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
               검색어, 카테고리, 전산적용 여부를 기준으로 실무자료를 골라보고, 카드 확장 후 즉시 내용을 수정하거나 삭제할 수 있습니다.
             </p>

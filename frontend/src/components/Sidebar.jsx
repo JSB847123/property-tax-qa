@@ -27,7 +27,7 @@ export default function Sidebar({ stats, loading, favoritesCount = 0, favoritesL
       <div className="relative flex h-full flex-col gap-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Tax RAG Console</p>
-          <h1 className="mt-3 font-display text-3xl leading-tight text-ink">지방세 업무도우미</h1>
+          <h1 className="mt-3 font-pretendard text-3xl font-bold leading-tight text-ink">취득세·재산세 업무 도우미</h1>
           <p className="mt-3 text-sm leading-7 text-slate-600">
             취득세·재산세 질의, 내부 실무자료, 공개 법률 데이터를 한 화면에서 정리하는 업무용 인터페이스입니다.
           </p>

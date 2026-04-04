@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import register_startup
+from app.routers.backup import router as backup_router
 from app.routers.chat import router as chat_router
 from app.routers.documents import router as documents_router
 from app.routers.favorites import router as favorites_router
@@ -28,6 +29,7 @@ app.add_middleware(
 
 register_startup(app)
 app.include_router(documents_router)
+app.include_router(backup_router)
 app.include_router(chat_router)
 app.include_router(search_router)
 app.include_router(settings_router)

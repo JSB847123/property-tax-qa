@@ -454,3 +454,65 @@ def get_document_by_id(document_id: str) -> DocumentResponse | None:
     except sqlite3.Error as exc:
         logger.exception("Failed to fetch document %s from SQLite.", document_id)
         raise StorageError("Failed to fetch document.") from exc
+
+
+
+def list_all_documents() -> list[DocumentResponse]:
+    try:
+        with closing(get_connection()) as connection:
+            rows = connection.execute(
+                f"SELECT * FROM {TABLE_NAME} ORDER BY updated_at DESC"
+            ).fetchall()
+        return [_row_to_document(row) for row in rows]
+    except sqlite3.Error as exc:
+        logger.exception("Failed to list all documents from SQLite.")
+        raise StorageError("Failed to list documents.") from exc
+
+
+
+def upsert_document_snapshot(snapshot: DocumentResponse | dict[str, Any]) -> DocumentResponse:
+    document = snapshot if isinstance(snapshot, DocumentResponse) else DocumentResponse.model_validate(snapshot)
+
+    try:
+        with closing(get_connection()) as connection:
+            with connection:
+                _insert_or_replace_document(connection, document)
+    except sqlite3.Error as exc:
+        logger.exception("Failed to restore document %s into SQLite.", document.id)
+        raise StorageError("Failed to restore document into SQLite.") from exc
+
+    collection = _safe_get_collection()
+    if collection is None:
+        return document
+
+    try:
+        collection.upsert(
+            ids=[document.id],
+            documents=[_document_to_embedding_text(document)],
+            metadatas=[_document_to_metadata(document)],
+        )
+    except Exception:
+        logger.exception("Failed to restore document %s into ChromaDB. SQLite remains the source of truth.", document.id)
+    return document
+
+
+
+def clear_all_documents() -> int:
+    try:
+        with closing(get_connection()) as connection:
+            rows = connection.execute(f"SELECT id FROM {TABLE_NAME}").fetchall()
+            document_ids = [row["id"] for row in rows]
+            with connection:
+                connection.execute(f"DELETE FROM {TABLE_NAME}")
+    except sqlite3.Error as exc:
+        logger.exception("Failed to clear documents from SQLite.")
+        raise StorageError("Failed to clear documents.") from exc
+
+    collection = _safe_get_collection()
+    if collection is not None and document_ids:
+        try:
+            collection.delete(ids=document_ids)
+        except Exception:
+            logger.exception("Failed to clear documents from ChromaDB after SQLite delete.")
+
+    return len(document_ids)

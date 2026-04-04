@@ -6,6 +6,7 @@ const navigation = [
   { to: '/chat', label: '질의응답', caption: '공개·비공개 자료를 합쳐 바로 답변' },
   { to: '/favorites', label: '즐겨찾기', caption: '별표한 참조 출처를 한곳에 모아 보기' },
   { to: '/settings', label: '연동설정', caption: 'API 키를 임시 또는 영구 저장으로 적용' },
+  { to: '/backup', label: '백업/복원', caption: '등록 자료와 설정을 파일로 옮기기' },
   { to: '/documents', label: '자료관리', caption: '등록 자료 검색, 수정, 삭제' },
   { to: '/documents/new', label: '자료등록', caption: '새 실무자료 빠르게 입력' },
   { to: '/documents/bulk', label: '대량등록', caption: 'CSV 미리보기 후 일괄 반영' },

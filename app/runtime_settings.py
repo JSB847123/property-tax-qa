@@ -44,6 +44,38 @@ def _normalize_provider(value: str | None) -> str:
     return normalized if normalized in LLM_PROVIDERS else ''
 
 
+def normalize_settings_snapshot(raw: dict[str, object] | None) -> dict[str, str]:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError('설정 백업 형식이 올바르지 않습니다.')
+
+    data: dict[str, str] = {}
+    for key in SUPPORTED_KEYS:
+        if key not in raw:
+            continue
+
+        raw_value = raw.get(key)
+        if raw_value in (None, ''):
+            continue
+        if not isinstance(raw_value, str):
+            raise ValueError(f'{key} 값은 문자열이어야 합니다.')
+
+        if key == 'LLM_PROVIDER':
+            normalized_provider = _normalize_provider(raw_value)
+            if raw_value and not normalized_provider:
+                raise ValueError('지원하지 않는 답변 제공자입니다.')
+            if normalized_provider:
+                data[key] = normalized_provider
+            continue
+
+        normalized_value = _normalize_value(raw_value)
+        if normalized_value:
+            data[key] = normalized_value
+
+    return data
+
+
 def _load_persisted_settings() -> dict[str, str]:
     _ensure_settings_dir()
     if not SETTINGS_PATH.exists():
@@ -55,20 +87,21 @@ def _load_persisted_settings() -> dict[str, str]:
         logger.exception('Failed to read persisted runtime settings from %s', SETTINGS_PATH)
         return {}
 
-    if not isinstance(raw, dict):
+    try:
+        return normalize_settings_snapshot(raw if isinstance(raw, dict) else {})
+    except ValueError:
+        logger.exception('Failed to normalize persisted runtime settings from %s', SETTINGS_PATH)
         return {}
-
-    data: dict[str, str] = {}
-    for key in SUPPORTED_KEYS:
-        value = _normalize_provider(raw.get(key)) if key == 'LLM_PROVIDER' else _normalize_value(raw.get(key))
-        if value:
-            data[key] = value
-    return data
 
 
 def _write_persisted_settings(data: dict[str, str]) -> None:
     _ensure_settings_dir()
     SETTINGS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _clear_persisted_settings() -> None:
+    if SETTINGS_PATH.exists():
+        SETTINGS_PATH.unlink()
 
 
 def _get_env_value(name: str) -> str:
@@ -113,6 +146,36 @@ def _setting_status(name: str, persisted: dict[str, str]) -> dict[str, str | boo
         'source': _resolve_source(name),
         'saved': bool(persisted.get(name)),
     }
+
+
+def export_settings_snapshot() -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for key in SUPPORTED_KEYS:
+        value = get_config_value(key)
+        if value:
+            snapshot[key] = value
+    return snapshot
+
+
+def import_settings_snapshot(data: dict[str, object] | None, *, replace: bool = False) -> dict[str, object]:
+    normalized = normalize_settings_snapshot(data)
+
+    with _lock:
+        _runtime_overrides.clear()
+        if replace:
+            if normalized:
+                _write_persisted_settings(normalized)
+            else:
+                _clear_persisted_settings()
+        else:
+            persisted = _load_persisted_settings()
+            persisted.update(normalized)
+            if persisted:
+                _write_persisted_settings(persisted)
+            else:
+                _clear_persisted_settings()
+
+    return get_settings_status()
 
 
 def get_llm_provider() -> str:

@@ -115,4 +115,29 @@ export async function clearSessionSettings() {
   })
 }
 
+export async function downloadBackupFile() {
+  const response = await fetch(`${API_BASE_URL}/api/backup/export`)
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || '백업 파일을 내려받지 못했습니다.')
+  }
+
+  const disposition = response.headers.get('content-disposition') || ''
+  const matched = disposition.match(/filename="([^"]+)"/)
+  return {
+    blob: await response.blob(),
+    filename: matched?.[1] || 'tax_rag_backup.json',
+  }
+}
+
+export async function restoreBackupFile(file, mode = 'merge') {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('mode', mode)
+  return request('/api/backup/import', {
+    method: 'POST',
+    body: formData,
+  })
+}
+
 export { API_BASE_URL }

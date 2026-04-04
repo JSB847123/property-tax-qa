@@ -26,26 +26,11 @@ def _row_to_favorite(row: Any) -> dict[str, Any]:
     }
 
 
-def list_favorites() -> list[dict[str, Any]]:
-    with get_connection() as connection:
-        rows = connection.execute(
-            f"SELECT favorite_id, source_id, category, source_type, is_private, title, source, reference, citation, detail_link, summary, date, created_at "
-            f"FROM {FAVORITES_TABLE_NAME} ORDER BY created_at DESC"
-        ).fetchall()
-    return [_row_to_favorite(row) for row in rows]
-
-
-def save_favorite(payload: FavoriteSourceInput | dict[str, Any]) -> dict[str, Any]:
-    source_data = payload.model_dump() if isinstance(payload, FavoriteSourceInput) else dict(payload)
-    normalized = normalize_favorite_source(source_data)
+def _upsert_favorite_record(payload: dict[str, Any], *, created_at: str) -> dict[str, Any]:
+    normalized = normalize_favorite_source(payload)
+    favorite_id = str(payload.get("favorite_id") or normalized["favorite_id"])
 
     with get_connection() as connection:
-        existing = connection.execute(
-            f"SELECT created_at FROM {FAVORITES_TABLE_NAME} WHERE favorite_id = ?",
-            (normalized["favorite_id"],),
-        ).fetchone()
-        created_at = existing["created_at"] if existing else datetime.now(timezone.utc).isoformat()
-
         with connection:
             connection.execute(
                 f"""
@@ -64,10 +49,11 @@ def save_favorite(payload: FavoriteSourceInput | dict[str, Any]) -> dict[str, An
                     citation = excluded.citation,
                     detail_link = excluded.detail_link,
                     summary = excluded.summary,
-                    date = excluded.date
+                    date = excluded.date,
+                    created_at = excluded.created_at
                 """,
                 (
-                    normalized["favorite_id"],
+                    favorite_id,
                     normalized["id"],
                     normalized["category"],
                     normalized["source_type"],
@@ -86,10 +72,46 @@ def save_favorite(payload: FavoriteSourceInput | dict[str, Any]) -> dict[str, An
         row = connection.execute(
             f"SELECT favorite_id, source_id, category, source_type, is_private, title, source, reference, citation, detail_link, summary, date, created_at "
             f"FROM {FAVORITES_TABLE_NAME} WHERE favorite_id = ?",
-            (normalized["favorite_id"],),
+            (favorite_id,),
         ).fetchone()
 
     return _row_to_favorite(row)
+
+
+def list_favorites() -> list[dict[str, Any]]:
+    with get_connection() as connection:
+        rows = connection.execute(
+            f"SELECT favorite_id, source_id, category, source_type, is_private, title, source, reference, citation, detail_link, summary, date, created_at "
+            f"FROM {FAVORITES_TABLE_NAME} ORDER BY created_at DESC"
+        ).fetchall()
+    return [_row_to_favorite(row) for row in rows]
+
+
+def save_favorite(payload: FavoriteSourceInput | dict[str, Any]) -> dict[str, Any]:
+    source_data = payload.model_dump() if isinstance(payload, FavoriteSourceInput) else dict(payload)
+
+    with get_connection() as connection:
+        normalized = normalize_favorite_source(source_data)
+        existing = connection.execute(
+            f"SELECT created_at FROM {FAVORITES_TABLE_NAME} WHERE favorite_id = ?",
+            (normalized["favorite_id"],),
+        ).fetchone()
+
+    created_at = existing["created_at"] if existing else datetime.now(timezone.utc).isoformat()
+    return _upsert_favorite_record(source_data, created_at=created_at)
+
+
+def save_favorite_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+    created_at = str(payload.get('created_at') or datetime.now(timezone.utc).isoformat())
+    return _upsert_favorite_record(dict(payload), created_at=created_at)
+
+
+def clear_favorites() -> int:
+    with get_connection() as connection:
+        count = connection.execute(f"SELECT COUNT(*) FROM {FAVORITES_TABLE_NAME}").fetchone()[0]
+        with connection:
+            connection.execute(f"DELETE FROM {FAVORITES_TABLE_NAME}")
+    return count
 
 
 def delete_favorite(favorite_id: str) -> bool:

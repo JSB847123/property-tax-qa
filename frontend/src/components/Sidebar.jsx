@@ -23,9 +23,9 @@ function StatLine({ label, value, tone }) {
 
 export default function Sidebar({ stats, loading, favoritesCount = 0, favoritesLoading = false }) {
   return (
-    <aside className="shell-panel mesh-surface relative overflow-hidden px-5 py-6 sm:px-6 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
+    <aside className="shell-panel mesh-surface relative overflow-x-hidden px-5 py-6 sm:px-6 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:overflow-y-auto">
       <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-br from-emerald-200/60 via-transparent to-amber-200/60" />
-      <div className="relative flex h-full flex-col gap-6">
+      <div className="relative flex min-h-full flex-col gap-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Tax RAG Console</p>
           <h1 className="mt-3 font-pretendard text-3xl font-bold leading-tight text-ink">취득세·재산세 업무 도우미</h1>

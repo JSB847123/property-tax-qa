@@ -228,26 +228,27 @@ def test_csv_upload_accepts_other_category() -> None:
 
 
 def test_parse_markdown_documents() -> None:
-    markdown_content = """# 사실상 취득의 판단 기준 정리
+    markdown_content = """# 경매취득 정리
 - 분류: 이론
 - 출처: 내부 검토 메모
-- 날짜: 2026-04-03
-- 태그: 취득세;사실상취득
-## 내용
-사실상 취득은 대금 지급과 사용수익의 이전 등 실질을 기준으로 판단한다.
-## 전산적용
-잔금일과 점유 이전일을 함께 확인한다.
+- 날짜: 2026-01-01
+- 태그: 취득세;경매취득
+## 내용(예시)
+경매로 부동산을 취득하는 경우에는 사실상 취득가격으로써 그 경매가액이 그대로 과세표준이 된다.
+## 전산적용(예시)
+매각대금완납증명원 등 확인 후 취득가액 입력, 과세표준 확인
 
 ---
-# 증여취득 신고 누락 민원
+# 시가인정액 관련 문의
 - 분류: 민원처리
 - 출처: 민원처리 내부기록
-- 날짜: 2026-04-03
+- 날짜: 2026-01-02
 - 태그: 취득세;증여;민원
-내용:
-신고 누락 민원 처리 기록
-전산적용:
-위택스 보완 입력
+내용(예시):
+질문: 시가인정액이 없으면 시가표준액으로 적용하는지 문의
+답변: (작성)
+전산적용(예시):
+확인 후 적용
 """
 
     rows = documents_router._parse_markdown_documents(markdown_content)
@@ -256,37 +257,40 @@ def test_parse_markdown_documents() -> None:
 
     assert len(rows) == 2
     assert first.category == "theory"
-    assert first.title == "사실상 취득의 판단 기준 정리"
-    assert first.practical == "잔금일과 점유 이전일을 함께 확인한다."
-    assert first.tags == ["취득세", "사실상취득"]
+    assert first.title == "경매취득 정리"
+    assert first.content == "경매로 부동산을 취득하는 경우에는 사실상 취득가격으로써 그 경매가액이 그대로 과세표준이 된다."
+    assert first.practical == "매각대금완납증명원 등 확인 후 취득가액 입력, 과세표준 확인"
+    assert first.tags == ["취득세", "경매취득"]
     assert second.category == "civil"
-    assert second.content == "신고 누락 민원 처리 기록"
-    assert second.practical == "위택스 보완 입력"
+    assert second.title == "시가인정액 관련 문의"
+    assert second.content == "질문: 시가인정액이 없으면 시가표준액으로 적용하는지 문의\n답변: (작성)"
+    assert second.practical == "확인 후 적용"
 
 
 def test_markdown_bulk_upload(client: TestClient) -> None:
     pytest.importorskip("multipart")
 
-    markdown_content = """# 사실상 취득의 판단 기준 정리
+    markdown_content = """# 경매취득 정리
 - 분류: 이론
 - 출처: 내부 검토 메모
-- 날짜: 2026-04-03
-- 태그: 취득세;사실상취득
-## 내용
-사실상 취득은 대금 지급과 사용수익의 이전 등 실질을 기준으로 판단한다.
-## 전산적용
-잔금일과 점유 이전일을 함께 확인한다.
+- 날짜: 2026-01-01
+- 태그: 취득세;경매취득
+## 내용(예시)
+경매로 부동산을 취득하는 경우에는 사실상 취득가격으로써 그 경매가액이 그대로 과세표준이 된다.
+## 전산적용(예시)
+매각대금완납증명원 등 확인 후 취득가액 입력, 과세표준 확인
 
 ---
-# 증여취득 신고 누락 민원
+# 시가인정액 관련 문의
 - 분류: 민원처리
 - 출처: 민원처리 내부기록
-- 날짜: 2026-04-03
+- 날짜: 2026-01-02
 - 태그: 취득세;증여;민원
-## 내용
-신고 누락 민원 처리 기록
-## 전산적용
-위택스 보완 입력
+## 내용(예시)
+질문: 시가인정액이 없으면 시가표준액으로 적용하는지 문의
+답변: (작성)
+## 전산적용(예시)
+확인 후 적용
 """
 
     response = client.post(

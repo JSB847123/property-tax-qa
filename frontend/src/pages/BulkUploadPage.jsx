@@ -5,26 +5,27 @@ import { uploadBulkCsv } from '../lib/api'
 import { buildBulkPreview } from '../lib/bulkImport'
 import { categoryOptions, getCategoryMeta } from '../lib/categories'
 
-const markdownExample = `# 사실상 취득의 판단 기준 정리
+const markdownExample = `# 경매취득 정리
 - 분류: 이론
 - 출처: 내부 검토 메모
-- 날짜: 2026-04-03
-- 태그: 취득세;사실상취득
-## 내용
-사실상 취득은 대금 지급과 사용수익의 이전 등 실질을 기준으로 판단한다.
-## 전산적용
-잔금일과 점유 이전일을 함께 확인한다.
+- 날짜: 2026-01-01
+- 태그: 취득세;경매취득
+## 내용(예시)
+경매로 부동산을 취득하는 경우에는 사실상 취득가격으로써 그 경매가액이 그대로 과세표준이 된다.
+## 전산적용(예시)
+매각대금완납증명원 등 확인 후 취득가액 입력, 과세표준 확인
 
 ---
-# 증여취득 신고 누락 민원
+# 시가인정액 관련 문의
 - 분류: 민원처리
 - 출처: 민원처리 내부기록
-- 날짜: 2026-04-03
+- 날짜: 2026-01-02
 - 태그: 취득세;증여;민원
-## 내용
-신고 누락 민원 처리 기록
-## 전산적용
-위택스 보완 입력`
+## 내용(예시)
+질문: 시가인정액이 없으면 시가표준액으로 적용하는지 문의
+답변: (작성)
+## 전산적용(예시)
+확인 후 적용`
 
 export default function BulkUploadPage() {
   const { refreshStats } = useOutletContext()
@@ -101,7 +102,7 @@ export default function BulkUploadPage() {
               <p className="mt-2 text-sm leading-7 text-slate-600">
                 CSV 헤더: 분류, 제목, 출처, 내용, 전산적용, 날짜, 태그
                 <br />
-                Markdown: <code># 제목</code>, <code>- 분류:</code>, <code>## 내용</code>, <code>## 전산적용</code>, 문서 구분선 <code>---</code>
+                Markdown: <code># 제목</code>, <code>- 분류:</code>, <code>## 내용</code> 또는 <code>## 내용(예시)</code>, <code>## 전산적용</code> 또는 <code>## 전산적용(예시)</code>, 문서 구분선 <code>---</code>
               </p>
               <input type="file" accept=".csv,text/csv,.md,.markdown,text/markdown" className="mt-5 block w-full text-sm text-slate-600" onChange={handleFileChange} />
               {file ? <p className="mt-4 text-sm font-semibold text-moss">선택 파일: {file.name}</p> : null}
@@ -157,7 +158,7 @@ export default function BulkUploadPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700/80">Markdown 예시</p>
             <h3 className="mt-2 text-2xl font-display text-ink">문서를 여러 건으로 나눠서 작성하기</h3>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              각 문서는 제목과 메타데이터를 적고, 문서와 문서 사이는 <code>---</code> 한 줄로 구분하세요. <code>## 내용</code> 섹션이 없으면 본문 전체를 내용으로 간주합니다.
+              각 문서는 제목과 메타데이터를 적고, 문서와 문서 사이는 <code>---</code> 한 줄로 구분하세요. <code>## 내용</code>, <code>## 내용(예시)</code>처럼 작성해도 인식되며, 내용 섹션이 없으면 본문 전체를 내용으로 간주합니다.
             </p>
             <pre className="mt-4 overflow-x-auto rounded-[24px] border border-slate-200 bg-slate-950 px-4 py-4 text-xs leading-6 text-slate-100">{markdownExample}</pre>
           </section>

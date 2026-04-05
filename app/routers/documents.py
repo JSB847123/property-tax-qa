@@ -264,6 +264,13 @@ def _strip_markdown_prefix(value: str) -> str:
     return re.sub(r"^\s*[-*]\s+", "", value).strip()
 
 
+def _normalize_markdown_section_key(value: str) -> str:
+    normalized = value.strip()
+    for key in MARKDOWN_SECTION_KEYS:
+        if normalized == key or normalized.startswith(f"{key}("):
+            return key
+    return normalized
+
 
 def _extract_markdown_document_fields(block: str) -> dict[str, str]:
     raw_fields = {header: "" for header in CSV_HEADERS}
@@ -285,13 +292,13 @@ def _extract_markdown_document_fields(block: str) -> dict[str, str]:
         normalized = _strip_markdown_prefix(stripped)
 
         if normalized.startswith("## "):
-            heading = normalized[3:].strip()
+            heading = _normalize_markdown_section_key(normalized[3:].strip())
             if heading in MARKDOWN_SECTION_KEYS:
                 current_section = heading
                 continue
 
         key, separator, value = normalized.partition(":")
-        key = key.strip()
+        key = _normalize_markdown_section_key(key.strip())
         if separator and key in MARKDOWN_SECTION_KEYS:
             current_section = key
             if value.strip():

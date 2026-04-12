@@ -49,32 +49,53 @@ const credentialFields = [
   {
     key: 'anthropicApiKey',
     payloadKey: 'anthropic_api_key',
+    statusKey: 'anthropic',
     label: 'Anthropic API Key',
     placeholder: 'sk-ant-...',
     helper: 'Claude를 최종 답변 생성 모델로 쓸 때 사용합니다.',
+    providerValue: 'anthropic',
   },
   {
     key: 'openaiApiKey',
     payloadKey: 'openai_api_key',
+    statusKey: 'openai',
     label: 'OpenAI API Key',
     placeholder: 'sk-...',
     helper: 'OpenAI를 최종 답변 생성 모델로 쓸 때 사용합니다.',
+    providerValue: 'openai',
   },
   {
     key: 'geminiApiKey',
     payloadKey: 'gemini_api_key',
+    statusKey: 'gemini',
     label: 'Gemini API Key',
     placeholder: 'AIza...',
     helper: 'Google Gemini를 최종 답변 생성 모델로 쓸 때 사용합니다.',
+    providerValue: 'gemini',
   },
   {
     key: 'glmApiKey',
     payloadKey: 'glm_api_key',
-    label: 'GLM API Key',
+    statusKey: 'glm',
+    label: 'GLM API Key (z.ai)',
     placeholder: 'Zhipu GLM API Key',
-    helper: 'Zhipu GLM을 최종 답변 생성 모델로 쓸 때 사용합니다.',
+    helper: 'Zhipu GLM과 z.ai 계열 API를 최종 답변 생성 모델로 쓸 때 사용합니다.',
+    providerValue: 'glm',
+  },
+  {
+    key: 'lawOc',
+    payloadKey: 'law_oc',
+    statusKey: 'law_oc',
+    label: 'LAW_OC',
+    placeholder: '국가법령정보 OC 값을 입력하세요',
+    helper: '판례, 심판례, 법령 외부검색에 사용하는 국가법령정보 공동활용 식별값입니다.',
   },
 ]
+
+const emptyCredentialValues = credentialFields.reduce((accumulator, field) => {
+  accumulator[field.key] = ''
+  return accumulator
+}, {})
 
 function StatusBadge({ configured, source, saved }) {
   const tone = configured ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500'
@@ -114,18 +135,46 @@ function ProviderCard({ option, active, onSelect }) {
   )
 }
 
+function CredentialFieldCard({ field, value, mode, status, saving, onChange, onSave }) {
+  return (
+    <article className="rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-panel">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-base font-semibold text-ink">{field.label}</p>
+          <p className="mt-2 text-xs leading-6 text-slate-500">{field.helper}</p>
+        </div>
+        <StatusBadge configured={status?.configured} source={status?.source} saved={status?.saved} />
+      </div>
+
+      <input
+        className="field-input mt-4"
+        type="password"
+        value={value}
+        onChange={(event) => onChange(field.key, event.target.value)}
+        placeholder={field.placeholder}
+        autoComplete="off"
+      />
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs leading-6 text-slate-500">
+          {field.providerValue ? (mode === 'saved' ? '이 키를 저장하고 해당 제공자를 함께 활성화합니다.' : '이 키를 적용하고 해당 제공자를 함께 전환합니다.') : (mode === 'saved' ? '이 값만 로컬 설정 파일에 저장합니다.' : '이 값만 이번 실행에 적용합니다.')}
+        </p>
+        <button type="button" className="primary-button px-4 py-3" onClick={() => onSave(field)} disabled={saving || !value.trim()}>
+          {saving ? '적용 중...' : field.providerValue ? (mode === 'saved' ? '저장 후 사용' : '적용 후 사용') : (mode === 'saved' ? '이 값 저장' : '이 값 적용')}
+        </button>
+      </div>
+    </article>
+  )
+}
+
 export default function SettingsPage() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [savingTarget, setSavingTarget] = useState('')
   const [clearing, setClearing] = useState(false)
   const [mode, setMode] = useState('session')
   const [provider, setProvider] = useState('anthropic')
-  const [anthropicApiKey, setAnthropicApiKey] = useState('')
-  const [openaiApiKey, setOpenaiApiKey] = useState('')
-  const [geminiApiKey, setGeminiApiKey] = useState('')
-  const [glmApiKey, setGlmApiKey] = useState('')
-  const [lawOc, setLawOc] = useState('')
+  const [credentialValues, setCredentialValues] = useState(() => ({ ...emptyCredentialValues }))
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -134,7 +183,7 @@ export default function SettingsPage() {
     try {
       const next = await fetchSettingsStatus()
       setStatus(next)
-      setProvider(next?.llm_provider?.active || 'anthropic')
+      setProvider(next?.llm_provider?.selected || next?.llm_provider?.active || 'anthropic')
       setError('')
     } catch (requestError) {
       setError(requestError.message)
@@ -144,42 +193,71 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    loadStatus()
+    void loadStatus()
   }, [])
 
   const modeDescription = useMemo(() => modeCards.find((item) => item.value === mode)?.description || '', [mode])
   const activeProviderLabel = useMemo(() => providerOptions.find((item) => item.value === provider)?.label || provider, [provider])
 
-  async function handleSubmit(event) {
-    event.preventDefault()
+  function updateCredentialValue(key, nextValue) {
+    setCredentialValues((current) => ({
+      ...current,
+      [key]: nextValue,
+    }))
+  }
 
-    const payload = {
-      anthropic_api_key: anthropicApiKey || undefined,
-      openai_api_key: openaiApiKey || undefined,
-      gemini_api_key: geminiApiKey || undefined,
-      glm_api_key: glmApiKey || undefined,
-      law_oc: lawOc || undefined,
-      llm_provider: provider,
-      mode,
+  async function handleSaveField(field) {
+    const nextValue = credentialValues[field.key].trim()
+    if (!nextValue) {
+      setError(field.label + ' 값을 입력해주세요.')
+      setMessage('')
+      return
     }
 
-    setSaving(true)
+    setSavingTarget(field.payloadKey)
     try {
+      const payload = {
+        [field.payloadKey]: nextValue,
+        mode,
+      }
+      if (field.providerValue) {
+        payload.llm_provider = field.providerValue
+      }
+
       const response = await saveCredentials(payload)
       setStatus(response.settings)
-      setProvider(response.settings?.llm_provider?.active || provider)
-      setMessage(response.message)
+      setProvider(response.settings?.llm_provider?.selected || response.settings?.llm_provider?.active || provider)
+      setMessage(field.providerValue ? field.label + ': ' + response.message + ' 현재 활성 제공자도 함께 변경했습니다.' : field.label + ': ' + response.message)
       setError('')
-      setAnthropicApiKey('')
-      setOpenaiApiKey('')
-      setGeminiApiKey('')
-      setGlmApiKey('')
-      setLawOc('')
+      setCredentialValues((current) => ({
+        ...current,
+        [field.key]: '',
+      }))
     } catch (requestError) {
       setError(requestError.message)
       setMessage('')
     } finally {
-      setSaving(false)
+      setSavingTarget('')
+    }
+  }
+
+
+  async function handleSaveProvider() {
+    setSavingTarget('llm_provider')
+    try {
+      const response = await saveCredentials({
+        llm_provider: provider,
+        mode,
+      })
+      setStatus(response.settings)
+      setProvider(response.settings?.llm_provider?.selected || response.settings?.llm_provider?.active || provider)
+      setMessage(`답변 제공자: ${response.message}`)
+      setError('')
+    } catch (requestError) {
+      setError(requestError.message)
+      setMessage('')
+    } finally {
+      setSavingTarget('')
     }
   }
 
@@ -188,7 +266,7 @@ export default function SettingsPage() {
     try {
       const response = await clearSessionSettings()
       setStatus(response.settings)
-      setProvider(response.settings?.llm_provider?.active || 'anthropic')
+      setProvider(response.settings?.llm_provider?.selected || response.settings?.llm_provider?.active || 'anthropic')
       setMessage(response.message)
       setError('')
     } catch (requestError) {
@@ -205,9 +283,9 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-moss/70">Connection Settings</p>
-            <h2 className="mt-3 font-pretendard text-4xl font-bold leading-tight text-ink sm:text-5xl">답변 제공자와 외부검색 키를 화면에서 선택하고 바로 적용할 수 있습니다.</h2>
+            <h2 className="mt-3 font-pretendard text-4xl font-bold leading-tight text-ink sm:text-5xl">연동 키를 항목별로 따로 입력하고 바로 적용할 수 있습니다.</h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Anthropic, OpenAI, Gemini, GLM 키를 저장하고 어떤 제공자로 최종 답변을 생성할지 선택할 수 있습니다. LAW_OC는 판례, 심판례, 법령 외부검색에 계속 사용됩니다.
+              Anthropic, OpenAI, Gemini, GLM, LAW_OC를 각각 따로 저장할 수 있고, 답변 제공자 선택도 키 저장과 분리해서 적용할 수 있습니다.
             </p>
           </div>
 
@@ -229,14 +307,14 @@ export default function SettingsPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-moss/70">입력</p>
-                <h3 className="mt-2 text-2xl font-display text-ink">연동 키와 답변 제공자 적용</h3>
+                <h3 className="mt-2 text-2xl font-display text-ink">항목별 저장과 개별 적용</h3>
               </div>
               <button type="button" className="secondary-button px-4 py-3" onClick={handleClearSession} disabled={clearing}>
                 {clearing ? '초기화 중...' : '임시 설정 초기화'}
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+            <div className="mt-6 space-y-6">
               <div>
                 <div className="text-sm font-semibold text-slate-700">답변 제공자 선택</div>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -269,84 +347,37 @@ export default function SettingsPage() {
                 {modeDescription}
               </div>
 
+              <section className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">답변 제공자만 따로 적용</p>
+                    <p className="mt-2 text-xs leading-6 text-slate-500">API 키를 다시 입력하지 않아도 현재 사용할 제공자만 별도로 바꿔 저장할 수 있습니다.</p>
+                  </div>
+                  <button type="button" className="primary-button px-4 py-3" onClick={handleSaveProvider} disabled={savingTarget === 'llm_provider'}>
+                    {savingTarget === 'llm_provider' ? '적용 중...' : mode === 'saved' ? '제공자 저장' : '제공자 적용'}
+                  </button>
+                </div>
+              </section>
+
               <div className="grid gap-5 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Anthropic API Key</span>
-                  <input
-                    className="field-input mt-3"
-                    type="password"
-                    value={anthropicApiKey}
-                    onChange={(event) => setAnthropicApiKey(event.target.value)}
-                    placeholder="sk-ant-..."
-                    autoComplete="off"
+                {credentialFields.map((field) => (
+                  <CredentialFieldCard
+                    key={field.key}
+                    field={field}
+                    value={credentialValues[field.key]}
+                    mode={mode}
+                    status={status?.[field.statusKey]}
+                    saving={savingTarget === field.payloadKey}
+                    onChange={updateCredentialValue}
+                    onSave={handleSaveField}
                   />
-                  <p className="mt-3 text-xs leading-6 text-slate-500">Claude를 최종 답변 생성 모델로 쓸 때 사용합니다.</p>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">OpenAI API Key</span>
-                  <input
-                    className="field-input mt-3"
-                    type="password"
-                    value={openaiApiKey}
-                    onChange={(event) => setOpenaiApiKey(event.target.value)}
-                    placeholder="sk-..."
-                    autoComplete="off"
-                  />
-                  <p className="mt-3 text-xs leading-6 text-slate-500">OpenAI를 최종 답변 생성 모델로 쓸 때 사용합니다.</p>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Gemini API Key</span>
-                  <input
-                    className="field-input mt-3"
-                    type="password"
-                    value={geminiApiKey}
-                    onChange={(event) => setGeminiApiKey(event.target.value)}
-                    placeholder="AIza..."
-                    autoComplete="off"
-                  />
-                  <p className="mt-3 text-xs leading-6 text-slate-500">Google Gemini를 최종 답변 생성 모델로 쓸 때 사용합니다.</p>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">GLM API Key</span>
-                  <input
-                    className="field-input mt-3"
-                    type="password"
-                    value={glmApiKey}
-                    onChange={(event) => setGlmApiKey(event.target.value)}
-                    placeholder="Zhipu GLM API Key"
-                    autoComplete="off"
-                  />
-                  <p className="mt-3 text-xs leading-6 text-slate-500">Zhipu GLM을 최종 답변 생성 모델로 쓸 때 사용합니다.</p>
-                </label>
+                ))}
               </div>
 
-              <label className="block">
-                <span className="text-sm font-semibold text-slate-700">LAW_OC</span>
-                <input
-                  className="field-input mt-3"
-                  type="password"
-                  value={lawOc}
-                  onChange={(event) => setLawOc(event.target.value)}
-                  placeholder="국가법령정보 OC 값을 입력하세요"
-                  autoComplete="off"
-                />
-                <p className="mt-3 text-xs leading-6 text-slate-500">
-                  LAW_OC는 국가법령정보 공동활용 OPEN API에서 발급받아 사용합니다. 아래 안내 카드의 공식 링크에서 회원가입과 활용신청 순서를 확인할 수 있습니다.
-                </p>
-              </label>
-
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs leading-6 text-slate-500">
-                  보안을 위해 입력한 값은 다시 화면에 표시하지 않습니다. 키를 새로 입력하지 않아도 제공자 선택만 바꿔서 적용할 수 있습니다.
-                </p>
-                <button type="submit" className="primary-button" disabled={saving}>
-                  {saving ? '적용 중...' : mode === 'saved' ? '저장하고 적용' : '이번 실행에만 적용'}
-                </button>
+              <div className="rounded-[24px] border border-slate-200 bg-white/80 px-4 py-4 text-xs leading-6 text-slate-500">
+                보안을 위해 입력한 값은 저장 후 다시 화면에 표시하지 않습니다. 각 항목은 서로 독립적으로 저장되며, 새 값을 입력한 항목만 업데이트됩니다.
               </div>
-            </form>
+            </div>
           </section>
 
           {message ? <div className="shell-panel border border-emerald-200 bg-emerald-50/85 px-5 py-4 text-sm text-emerald-700">{message}</div> : null}
@@ -414,3 +445,6 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+
+

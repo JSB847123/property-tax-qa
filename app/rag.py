@@ -55,17 +55,14 @@ PUBLIC_CATEGORY_LABELS = {
 
 PUBLIC_TAX_TERMS = ("취득세", "재산세", "등록면허세")
 PUBLIC_QUERY_NOISE_TOKENS = {
-    "관련",
-    "알려줘",
-    "알려주세요",
-    "설명해줘",
-    "설명해주세요",
-    "정리해줘",
-    "정리해주세요",
-    "찾아줘",
-    "찾아주세요",
-    "문의",
-    "질문",
+    "관련", "대한", "대해", "대하여", "통한", "위한", "해당",
+    "알려줘", "알려주세요", "설명해줘", "설명해주세요",
+    "정리해줘", "정리해주세요", "찾아줘", "찾아주세요",
+    "문의", "질문", "답변", "확인",
+    "간", "의", "에", "를", "을", "이", "가", "은", "는",
+    "로", "으로", "와", "과", "도", "만", "등", "및", "또는",
+    "된", "되는", "하는", "있는", "없는", "하여",
+    "어떻게", "어떤", "무엇", "무슨", "왜", "뭐야", "뭔가요",
 }
 PUBLIC_SOURCE_HINT_TOKENS = {
     "판례",
@@ -456,6 +453,10 @@ def _rewrite_public_query_variants(query: str) -> list[str]:
     return variants
 
 
+def _is_meaningful_token(token: str) -> bool:
+    return len(token) >= 2 and token not in PUBLIC_QUERY_NOISE_TOKENS and token not in PUBLIC_SOURCE_HINT_TOKENS
+
+
 def _drop_token_queries(tokens: list[str]) -> list[str]:
     if len(tokens) < 3:
         return []
@@ -464,6 +465,9 @@ def _drop_token_queries(tokens: list[str]) -> list[str]:
     for index in range(len(tokens)):
         candidate_tokens = tokens[:index] + tokens[index + 1 :]
         if len(candidate_tokens) < 2:
+            continue
+        meaningful_count = sum(1 for t in candidate_tokens if _is_meaningful_token(t))
+        if meaningful_count < 1:
             continue
         queries.append(" ".join(candidate_tokens))
     return queries

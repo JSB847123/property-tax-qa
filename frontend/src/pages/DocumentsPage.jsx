@@ -206,7 +206,7 @@ export default function DocumentsPage() {
                 <button
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : document.id)}
-                  className="flex w-full flex-col gap-4 p-6 text-left transition hover:bg-white/40"
+                  className="flex w-full flex-col gap-4 p-6 pb-3 text-left transition hover:bg-white/40"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-3">
@@ -226,6 +226,17 @@ export default function DocumentsPage() {
                   </div>
                   <p className="max-w-5xl text-sm leading-7 text-slate-600">{summarizeText(document.content)}</p>
                 </button>
+
+                <div className="flex justify-end px-6 pb-4">
+                  <button
+                    type="button"
+                    className="danger-button px-3 py-1.5 text-xs"
+                    onClick={() => handleDelete(document)}
+                    disabled={deletingId === document.id}
+                  >
+                    {deletingId === document.id ? '삭제 중...' : '삭제'}
+                  </button>
+                </div>
 
                 {expanded ? (
                   <div className="border-t border-slate-200 px-6 pb-6 pt-5">

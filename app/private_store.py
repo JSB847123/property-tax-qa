@@ -132,8 +132,25 @@ def _document_to_embedding_text(document: DocumentResponse) -> str:
     return "\n".join(parts)
 
 
+KOREAN_STOP_WORDS = frozenset({
+    "간", "의", "에", "를", "을", "이", "가", "은", "는", "로", "으로",
+    "와", "과", "도", "만", "부터", "까지", "에서", "한", "할", "하는",
+    "된", "되는", "대한", "관한", "통한", "위한", "및", "또는", "그",
+    "것", "수", "등", "중", "때", "더", "매우", "좀", "잘",
+    "관련", "해당", "대해", "대하여", "있는", "없는", "하여", "따른",
+    "알려줘", "알려주세요", "설명해줘", "설명해주세요", "뭐야", "뭔가요",
+    "어떻게", "어떤", "무엇", "무슨", "왜", "얼마", "언제",
+})
+
+MIN_TOKEN_LENGTH = 2
+
+
 def _tokenize_query(query: str) -> list[str]:
-    return [token.strip().lower() for token in query.split() if token.strip()]
+    return [
+        token.strip().lower()
+        for token in query.split()
+        if token.strip() and len(token.strip()) >= MIN_TOKEN_LENGTH and token.strip().lower() not in KOREAN_STOP_WORDS
+    ]
 
 
 def _field_score(value: str | None, query_text: str, tokens: list[str], *, exact_weight: int, token_weight: int) -> int:
@@ -143,11 +160,20 @@ def _field_score(value: str | None, query_text: str, tokens: list[str], *, exact
     return normalized.count(query_text) * exact_weight + sum(normalized.count(token) * token_weight for token in tokens)
 
 
+def _count_matched_tokens(value: str | None, tokens: list[str]) -> int:
+    normalized = (value or "").lower()
+    if not normalized:
+        return 0
+    return sum(1 for token in tokens if token in normalized)
+
+
 def _search_similar_sqlite(query: str, category: str | None = None, top_k: int = 5) -> list[dict[str, Any]]:
     query_text = query.strip().lower()
     tokens = _tokenize_query(query)
     if not query_text or not tokens:
         return []
+
+    min_matched_tokens = max(1, len(tokens) // 2)
 
     filters: list[str] = []
     params: list[Any] = []
@@ -176,6 +202,15 @@ def _search_similar_sqlite(query: str, category: str | None = None, top_k: int =
     for row in rows:
         document = _row_to_document(row)
         tags_text = " ".join(document.tags)
+
+        all_text = " ".join(filter(None, [
+            document.title, document.content, document.practical,
+            document.source, tags_text,
+        ]))
+        matched_count = _count_matched_tokens(all_text, tokens)
+        if matched_count < min_matched_tokens:
+            continue
+
         score = 0
         score += _field_score(document.title, query_text, tokens, exact_weight=30, token_weight=8)
         score += _field_score(document.content, query_text, tokens, exact_weight=18, token_weight=4)
@@ -183,6 +218,10 @@ def _search_similar_sqlite(query: str, category: str | None = None, top_k: int =
         score += _field_score(document.source, query_text, tokens, exact_weight=8, token_weight=2)
         score += _field_score(tags_text, query_text, tokens, exact_weight=12, token_weight=6)
         score += _field_score(document.category, query_text, tokens, exact_weight=6, token_weight=1)
+
+        if matched_count == len(tokens):
+            score = int(score * 1.5)
+
         if score <= 0:
             continue
 
@@ -191,7 +230,7 @@ def _search_similar_sqlite(query: str, category: str | None = None, top_k: int =
         ranked.append((score, payload))
 
     ranked.sort(key=lambda item: item[0], reverse=True)
-    return [payload for _, payload in ranked[: max(1, top_k)]]
+    return [payload for _, payload in ranked[:top_k]]
 
 
 def _insert_or_replace_document(connection: sqlite3.Connection, document: DocumentResponse) -> None:

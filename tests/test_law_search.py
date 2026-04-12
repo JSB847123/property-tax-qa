@@ -15,3 +15,13 @@ def test_normalize_detail_link_promotes_relative_urls_to_absolute_law_host() -> 
 
     assert law_search._normalize_detail_link(relative) == 'https://www.law.go.kr/DRF/lawService.do?target=prec&ID=231453&type=HTML'
     assert law_search._normalize_detail_link('https://www.law.go.kr/DRF/lawService.do?target=prec&ID=231453&type=HTML') == 'https://www.law.go.kr/DRF/lawService.do?target=prec&ID=231453&type=HTML'
+
+
+def test_base_params_reads_law_oc_from_runtime_settings(monkeypatch) -> None:
+    monkeypatch.setattr(law_search, 'get_law_oc', lambda: 'law-oc-value')
+
+    assert law_search._base_params('prec') == {
+        'OC': 'law-oc-value',
+        'target': 'prec',
+        'type': 'XML',
+    }

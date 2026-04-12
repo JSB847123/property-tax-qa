@@ -42,6 +42,48 @@ async def test_generate_text_dispatches_to_gemini(monkeypatch: pytest.MonkeyPatc
     assert result == 'gemini-result'
 
 
+@pytest.mark.anyio
+async def test_call_glm_uses_zai_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_post_json(url: str, *, headers: dict[str, str], payload: dict[str, object], provider: str) -> dict[str, object]:
+        captured['url'] = url
+        captured['headers'] = headers
+        captured['payload'] = payload
+        captured['provider'] = provider
+        return {
+            'choices': [
+                {
+                    'message': {
+                        'content': 'glm-result'
+                    }
+                }
+            ]
+        }
+
+    monkeypatch.setattr(llm_client, 'get_provider_api_key', lambda provider: 'glm-api-key' if provider == 'glm' else '')
+    monkeypatch.setattr(llm_client, '_post_json', fake_post_json)
+
+    result = await llm_client._call_glm('시스템', '사용자', max_tokens=321, temperature=0.3)
+
+    assert result == 'glm-result'
+    assert captured['url'] == 'https://api.z.ai/api/paas/v4/chat/completions'
+    assert captured['provider'] == 'glm'
+    assert captured['headers'] == {
+        'Authorization': 'Bearer glm-api-key',
+        'Content-Type': 'application/json',
+    }
+    assert captured['payload'] == {
+        'model': 'glm-5',
+        'messages': [
+            {'role': 'system', 'content': '시스템'},
+            {'role': 'user', 'content': '사용자'},
+        ],
+        'max_tokens': 321,
+        'temperature': 0.3,
+    }
+
+
 def test_extract_openai_text_reads_message_output() -> None:
     payload = {
         'output': [

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Literal
 
@@ -31,7 +32,7 @@ PROVIDER_LABELS = {
 }
 OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
 GEMINI_URL_TEMPLATE = 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
-GLM_CHAT_COMPLETIONS_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+GLM_CHAT_COMPLETIONS_URL = 'https://api.z.ai/api/paas/v4/chat/completions'
 
 
 class LLMClientError(Exception):
@@ -69,7 +70,7 @@ async def _call_anthropic(system_prompt: str, user_prompt: str, *, max_tokens: i
             )
     except Exception as exc:  # pragma: no cover - depends on external API
         logger.exception('Anthropic API call failed: %s', exc)
-        raise LLMClientError('Anthropic API 호출에 실패했습니다.') from exc
+        raise LLMClientError(f'Anthropic API 호출에 실패했습니다. ({exc})') from exc
 
     parts = [getattr(block, 'text', '') for block in getattr(message, 'content', []) if getattr(block, 'type', None) == 'text']
     answer = '\n'.join(part.strip() for part in parts if part and part.strip()).strip()
@@ -162,6 +163,19 @@ async def _call_glm(system_prompt: str, user_prompt: str, *, max_tokens: int, te
     return answer
 
 
+def _extract_api_error_message(response_text: str) -> str:
+    try:
+        data = json.loads(response_text)
+        error = data.get('error', {})
+        if isinstance(error, dict):
+            return error.get('message', '') or error.get('msg', '') or response_text[:200]
+        if isinstance(error, str):
+            return error
+        return response_text[:200]
+    except (json.JSONDecodeError, AttributeError):
+        return response_text[:200] if response_text else ''
+
+
 async def _post_json(url: str, *, headers: dict[str, str], payload: dict[str, Any], provider: LLMProvider) -> dict[str, Any]:
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, follow_redirects=True) as client:
@@ -171,10 +185,14 @@ async def _post_json(url: str, *, headers: dict[str, str], payload: dict[str, An
     except httpx.HTTPStatusError as exc:  # pragma: no cover - depends on external API
         detail = exc.response.text.strip()
         logger.exception('%s API returned an error: %s', PROVIDER_LABELS[provider], detail or exc)
-        raise LLMClientError(f'{PROVIDER_LABELS[provider]} API 호출에 실패했습니다.') from exc
+        error_reason = _extract_api_error_message(detail)
+        raise LLMClientError(f'{PROVIDER_LABELS[provider]} API 호출에 실패했습니다. ({error_reason})') from exc
+    except httpx.TimeoutException as exc:  # pragma: no cover - depends on network
+        logger.exception('%s API request timed out: %s', PROVIDER_LABELS[provider], exc)
+        raise LLMClientError(f'{PROVIDER_LABELS[provider]} API 요청 시간이 초과되었습니다.') from exc
     except Exception as exc:  # pragma: no cover - depends on external API
         logger.exception('%s API call failed: %s', PROVIDER_LABELS[provider], exc)
-        raise LLMClientError(f'{PROVIDER_LABELS[provider]} API 호출에 실패했습니다.') from exc
+        raise LLMClientError(f'{PROVIDER_LABELS[provider]} API 호출에 실패했습니다. ({exc})') from exc
 
     if not isinstance(data, dict):
         raise LLMClientError(f'{PROVIDER_LABELS[provider]} 응답 형식이 올바르지 않습니다.')
@@ -230,3 +248,4 @@ def _extract_glm_text(data: dict[str, Any]) -> str:
         parts = [str(part).strip() for part in content if str(part).strip()]
         return '\n'.join(parts).strip()
     return ''
+

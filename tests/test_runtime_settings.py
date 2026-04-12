@@ -7,6 +7,15 @@ import pytest
 from app import runtime_settings
 
 
+SETTING_CASES = [
+    ('anthropic_api_key', 'anthropic', 'get_anthropic_api_key'),
+    ('openai_api_key', 'openai', 'get_openai_api_key'),
+    ('gemini_api_key', 'gemini', 'get_gemini_api_key'),
+    ('glm_api_key', 'glm', 'get_glm_api_key'),
+    ('law_oc', 'law_oc', 'get_law_oc'),
+]
+
+
 @pytest.fixture(autouse=True)
 def isolated_runtime_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     settings_path = tmp_path / 'runtime_settings.json'
@@ -17,6 +26,50 @@ def isolated_runtime_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     for env_name in ('ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'GLM_API_KEY', 'LAW_OC', 'LLM_PROVIDER'):
         monkeypatch.delenv(env_name, raising=False)
     return settings_path
+
+
+@pytest.mark.parametrize(('persist', 'expected_source', 'expected_saved'), [(False, 'memory', False), (True, 'file', True)])
+@pytest.mark.parametrize(('payload_key', 'status_key', 'getter_name'), SETTING_CASES)
+def test_each_setting_can_be_updated_individually(
+    payload_key: str,
+    status_key: str,
+    getter_name: str,
+    persist: bool,
+    expected_source: str,
+    expected_saved: bool,
+) -> None:
+    value = f'{status_key}-configured-value'
+
+    status = runtime_settings.update_settings(persist=persist, **{payload_key: value})
+
+    assert status[status_key]['configured'] is True
+    assert status[status_key]['source'] == expected_source
+    assert status[status_key]['saved'] is expected_saved
+    getter = getattr(runtime_settings, getter_name)
+    assert getter() == value
+
+
+@pytest.mark.parametrize(('persist', 'expected_source', 'expected_saved'), [(False, 'memory', False), (True, 'file', True)])
+@pytest.mark.parametrize('provider', ['anthropic', 'openai', 'gemini', 'glm'])
+def test_provider_can_be_selected_individually(provider: str, persist: bool, expected_source: str, expected_saved: bool) -> None:
+    status = runtime_settings.update_settings(llm_provider=provider, persist=persist)
+
+    assert status['llm_provider']['active'] == provider
+    assert status['llm_provider']['selected'] == provider
+    assert status['llm_provider']['source'] == expected_source
+    assert status['llm_provider']['saved'] is expected_saved
+
+
+def test_individual_saved_updates_preserve_existing_values() -> None:
+    runtime_settings.update_settings(openai_api_key='saved-openai-key', persist=True)
+    runtime_settings.update_settings(law_oc='saved-law-oc', persist=True)
+
+    status = runtime_settings.get_settings_status()
+
+    assert runtime_settings.get_openai_api_key() == 'saved-openai-key'
+    assert runtime_settings.get_law_oc() == 'saved-law-oc'
+    assert status['openai']['configured'] is True
+    assert status['law_oc']['configured'] is True
 
 
 def test_session_settings_are_applied_without_persistence() -> None:

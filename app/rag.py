@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Any
 
+from app.korean_law_mcp import search_extended_public
 from app.law_search import get_precedent_detail, get_statute_detail, search_precedents, search_statutes, search_tribunal
 from app.llm_client import LLMClientError, generate_text
 from app.query_rules import extract_exact_phrases, filter_results_by_exact_phrases, strip_exact_phrase_quotes
@@ -51,6 +52,15 @@ PUBLIC_CATEGORY_LABELS = {
     "precedent": "판례",
     "statute": "법령",
     "tribunal": "심판례",
+    "admin_rule": "행정규칙",
+    "ordinance": "자치법규",
+    "treaty": "조약",
+    "interpretation": "해석례",
+    "tax_tribunal": "조세심판례",
+    "customs": "관세해석",
+    "nts": "국세청해석",
+    "constitutional": "헌재결정",
+    "admin_appeal": "행정심판례",
 }
 
 PUBLIC_TAX_TERMS = ("취득세", "재산세", "등록면허세")
@@ -75,6 +85,17 @@ PUBLIC_SOURCE_HINT_TOKENS = {
     "조문",
     "시행령",
     "시행규칙",
+    "행정규칙",
+    "고시",
+    "예규",
+    "훈령",
+    "자치법규",
+    "조례",
+    "규칙",
+    "조약",
+    "해석례",
+    "유권해석",
+    "질의회신",
 }
 PUBLIC_QUERY_REWRITE_MAP = {
     "특수관계인간": ("특수관계인", "특수관계자"),
@@ -95,6 +116,10 @@ PUBLIC_EXACT_MATCH_FIELDS = (
     "agency",
     "tribunal_name",
     "decision_type",
+    "source",
+    "source_label",
+    "raw_text",
+    "full_text",
 )
 
 
@@ -160,10 +185,28 @@ def _build_tribunal_title(item: dict[str, Any]) -> str:
 
 
 def _build_tribunal_source(item: dict[str, Any]) -> str:
-    agency = item.get("agency") or item.get("tribunal_name") or ""
+    agency = item.get("agency") or item.get("tribunal_name") or item.get("source") or ""
     decision_date = _format_date(item.get("decision_date"))
     parts = [agency, decision_date]
     return " ".join(part for part in parts if part).strip() or "국가법령정보센터"
+
+
+def _build_public_title(item: dict[str, Any]) -> str:
+    source_type = item.get("source_type")
+    if source_type == "precedent":
+        return _build_precedent_title(item)
+    if source_type == "statute":
+        return _build_statute_title(item)
+    return item.get("title") or item.get("case_name") or item.get("case_no") or _public_category_label(source_type)
+
+
+def _build_public_source(item: dict[str, Any]) -> str:
+    source_type = item.get("source_type")
+    if source_type == "precedent":
+        return _build_precedent_source(item)
+    if source_type == "statute":
+        return _build_statute_source(item)
+    return _build_tribunal_source(item)
 
 
 def _is_generic_public_title(value: str | None) -> bool:
@@ -186,7 +229,17 @@ def _build_public_source_summary(item: dict[str, Any]) -> str:
         if article_lines:
             return article_lines[0].removeprefix("- ").strip()
         return item.get("short_name") or item.get("full_text") or ""
-    return item.get("decision_type") or item.get("case_no") or item.get("agency") or item.get("tribunal_name") or ""
+    return (
+        item.get("summary")
+        or item.get("raw_text")
+        or item.get("full_text")
+        or item.get("decision_type")
+        or item.get("case_no")
+        or item.get("agency")
+        or item.get("tribunal_name")
+        or item.get("source")
+        or ""
+    )
 
 
 def _precedent_quality_score(item: dict[str, Any]) -> int:
@@ -292,12 +345,14 @@ def _public_context_block(item: dict[str, Any], index: int) -> str:
         return "\n".join(lines)
 
     lines = [
-        f"[공개자료{index}] 분류: {category_label} | 제목: {_build_tribunal_title(item)} | 출처: {_build_tribunal_source(item)}",
+        f"[공개자료{index}] 분류: {category_label} | 제목: {_build_public_title(item)} | 출처: {_build_public_source(item)}",
     ]
     if item.get("case_no"):
         lines.append(f"사건번호: {item.get('case_no')}")
     if item.get("decision_type"):
         lines.append(f"재결구분: {item.get('decision_type')}")
+    if item.get("summary") or item.get("raw_text"):
+        lines.append(f"요약: {_truncate_text(item.get('summary') or item.get('raw_text'), 900)}")
     if item.get("disposition_date"):
         lines.append(f"처분일자: {_format_date(item.get('disposition_date')) or item.get('disposition_date')}")
     if item.get("detail_link"):
@@ -330,9 +385,9 @@ def _build_source_entry(item: dict[str, Any], index: int, *, visibility: str) ->
         title = _build_statute_title(item)
         source = _build_statute_source(item)
     else:
-        reference = item.get("case_no") or item.get("serial_no")
-        title = _build_tribunal_title(item)
-        source = _build_tribunal_source(item)
+        reference = item.get("case_no") or item.get("serial_no") or item.get("id")
+        title = _build_public_title(item)
+        source = _build_public_source(item)
 
     public_summary = _build_public_source_summary(item)
     return {
@@ -541,15 +596,26 @@ def _public_result_key(item: dict[str, Any]) -> tuple[str, str]:
     return source_type, reference
 
 
-async def _search_public_batch(query: str, *, per_source_limit: int) -> list[dict[str, Any]]:
-    precedents, statutes, tribunal = await asyncio.gather(
+async def _search_public_batch(
+    query: str,
+    *,
+    per_source_limit: int,
+    include_extended: bool = True,
+) -> list[dict[str, Any]]:
+    search_tasks = [
         search_precedents(query, per_source_limit),
         search_statutes(query, per_source_limit),
         search_tribunal(query, per_source_limit),
-    )
+    ]
+    if include_extended:
+        search_tasks.append(search_extended_public(query, min(per_source_limit, 10)))
+
+    batches = await asyncio.gather(*search_tasks)
+    precedents, statutes, tribunal = batches[:3]
+    extended = batches[3] if include_extended else []
     precedents = _filter_and_sort_precedents(await _enrich_precedents(precedents))
     statutes = await _enrich_statutes(statutes)
-    return [*precedents, *statutes, *tribunal]
+    return [*precedents, *statutes, *tribunal, *extended]
 
 
 async def _search_public_results(question: str, *, limit: int = PUBLIC_SOURCE_LIMIT) -> list[dict[str, Any]]:
@@ -559,9 +625,17 @@ async def _search_public_results(question: str, *, limit: int = PUBLIC_SOURCE_LI
         exact_phrases = extract_exact_phrases(question)
         target_limit = max(limit, PUBLIC_CONTEXT_LIMIT)
         per_source_limit = min(target_limit * 2 if exact_phrases else target_limit, 60)
+        extended_search_used = False
 
         for query in _build_public_search_queries(question):
-            batch = await _search_public_batch(query, per_source_limit=per_source_limit)
+            include_extended = not extended_search_used
+            batch = await _search_public_batch(
+                query,
+                per_source_limit=per_source_limit,
+                include_extended=include_extended,
+            )
+            if include_extended:
+                extended_search_used = True
             batch = filter_results_by_exact_phrases(batch, exact_phrases, PUBLIC_EXACT_MATCH_FIELDS)
             if not batch:
                 continue
@@ -608,7 +682,7 @@ def _build_search_only_answer(
         elif source_type == "statute":
             title = _build_statute_title(item)
         else:
-            title = _build_tribunal_title(item)
+            title = _build_public_title(item)
 
         summary = _build_public_source_summary(item)
         if not summary:
@@ -635,9 +709,9 @@ def _build_search_only_answer(
     ][:2]
     if not case_lines:
         case_lines = [
-            f"[공개자료{index}] {_build_tribunal_title(item)}: {_truncate_text(item.get('case_no') or item.get('source'), 180)}"
+            f"[공개자료{index}] {_build_public_title(item)}: {_truncate_text(item.get('case_no') or item.get('source'), 180)}"
             for index, item in enumerate(public_results, start=1)
-            if item.get("source_type") == "tribunal"
+            if item.get("source_type") in {"tribunal", "tax_tribunal", "interpretation", "admin_appeal"}
         ][:2]
 
     summary_lines = [

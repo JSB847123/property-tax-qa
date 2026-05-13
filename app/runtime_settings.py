@@ -186,16 +186,18 @@ def get_llm_provider() -> str:
     for provider, key_name in PROVIDER_KEY_MAP.items():
         if get_config_value(key_name):
             return provider
-    return 'anthropic'
+    return ''
 
 
 def get_settings_status() -> dict[str, object]:
     persisted = _load_persisted_settings()
     explicit_provider = _normalize_provider(get_config_value('LLM_PROVIDER'))
+    active_provider = get_llm_provider()
 
     return {
         'llm_provider': {
-            'active': get_llm_provider(),
+            'active': active_provider or None,
+            'configured': bool(active_provider and get_provider_api_key(active_provider)),
             'selected': explicit_provider or None,
             'source': _resolve_source('LLM_PROVIDER'),
             'saved': bool(persisted.get('LLM_PROVIDER')),

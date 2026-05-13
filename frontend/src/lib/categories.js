@@ -50,7 +50,73 @@ export const categoryOptions = [
   },
 ]
 
-export const categoryMap = Object.fromEntries(categoryOptions.map((item) => [item.value, item]))
+export const publicCategoryOptions = [
+  {
+    value: 'admin_rule',
+    label: '행정규칙',
+    shortLabel: '행정규칙',
+    description: '고시, 훈령, 예규 등 행정규칙 공개자료입니다.',
+    tone: 'border-teal-200 bg-teal-50 text-teal-700',
+  },
+  {
+    value: 'ordinance',
+    label: '자치법규',
+    shortLabel: '자치법규',
+    description: '지방자치단체 조례와 규칙 공개자료입니다.',
+    tone: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+  },
+  {
+    value: 'treaty',
+    label: '조약',
+    shortLabel: '조약',
+    description: '국가 간 조약과 협정 공개자료입니다.',
+    tone: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+  },
+  {
+    value: 'interpretation',
+    label: '해석례',
+    shortLabel: '해석례',
+    description: '법령해석, 질의회신, 유권해석 공개자료입니다.',
+    tone: 'border-lime-200 bg-lime-50 text-lime-800',
+  },
+  {
+    value: 'tax_tribunal',
+    label: '조세심판례',
+    shortLabel: '조세심판례',
+    description: '조세심판원 결정 공개자료입니다.',
+    tone: 'border-purple-200 bg-purple-50 text-purple-700',
+  },
+  {
+    value: 'customs',
+    label: '관세해석',
+    shortLabel: '관세해석',
+    description: '관세 관련 결정과 해석 공개자료입니다.',
+    tone: 'border-blue-200 bg-blue-50 text-blue-700',
+  },
+  {
+    value: 'nts',
+    label: '국세청해석',
+    shortLabel: '국세청해석',
+    description: '국세청 해석과 질의회신 공개자료입니다.',
+    tone: 'border-orange-200 bg-orange-50 text-orange-700',
+  },
+  {
+    value: 'constitutional',
+    label: '헌재결정',
+    shortLabel: '헌재결정',
+    description: '헌법재판소 결정 공개자료입니다.',
+    tone: 'border-pink-200 bg-pink-50 text-pink-700',
+  },
+  {
+    value: 'admin_appeal',
+    label: '행정심판례',
+    shortLabel: '행정심판례',
+    description: '행정심판 재결 공개자료입니다.',
+    tone: 'border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700',
+  },
+]
+
+export const categoryMap = Object.fromEntries([...categoryOptions, ...publicCategoryOptions].map((item) => [item.value, item]))
 export const koreanCategoryMap = {
   판례: 'precedent',
   심판례: 'tribunal',
@@ -58,6 +124,15 @@ export const koreanCategoryMap = {
   민원처리: 'civil',
   이론: 'theory',
   법령: 'statute',
+  행정규칙: 'admin_rule',
+  자치법규: 'ordinance',
+  조약: 'treaty',
+  해석례: 'interpretation',
+  조세심판례: 'tax_tribunal',
+  관세해석: 'customs',
+  국세청해석: 'nts',
+  헌재결정: 'constitutional',
+  행정심판례: 'admin_appeal',
   기타: 'other',
 }
 

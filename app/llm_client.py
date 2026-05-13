@@ -49,6 +49,8 @@ async def generate_text(system_prompt: str, user_prompt: str, *, max_tokens: int
         return await _call_gemini(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
     if provider == 'glm':
         return await _call_glm(system_prompt, user_prompt, max_tokens=max_tokens, temperature=temperature)
+    if not provider:
+        raise LLMClientError('답변 제공자 API Key가 설정되어 있지 않습니다. 연동설정에서 사용할 제공자의 API Key를 입력해주세요.')
     raise LLMClientError('지원하지 않는 답변 제공자입니다.')
 
 

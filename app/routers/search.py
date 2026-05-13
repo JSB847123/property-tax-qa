@@ -16,7 +16,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 PRIVATE_TOP_K = 5
-PUBLIC_CATEGORIES = {"precedent", "tribunal", "statute"}
+PUBLIC_CATEGORIES = {
+    "precedent",
+    "tribunal",
+    "statute",
+    "admin_rule",
+    "ordinance",
+    "treaty",
+    "interpretation",
+    "tax_tribunal",
+    "customs",
+    "nts",
+    "constitutional",
+    "admin_appeal",
+}
 PRIVATE_EXACT_MATCH_FIELDS = ("title", "source", "content", "practical", "tags")
 
 
@@ -42,7 +55,7 @@ def _public_title(item: dict[str, Any]) -> str:
         return case_no or case_name or "판례"
     if source_type == "statute":
         return item.get("title") or item.get("name_kr") or item.get("short_name") or "법령"
-    return item.get("title") or item.get("case_name") or item.get("case_no") or "심판례"
+    return item.get("title") or item.get("case_name") or item.get("case_no") or item.get("source_label") or "공개자료"
 
 
 def _public_source(item: dict[str, Any]) -> str:
@@ -53,7 +66,10 @@ def _public_source(item: dict[str, Any]) -> str:
     if source_type == "statute":
         parts = [item.get("ministry") or "", _format_date(item.get("promulgation_date")) or ""]
         return " ".join(part for part in parts if part).strip() or "국가법령정보센터"
-    parts = [item.get("agency") or item.get("tribunal_name") or "", _format_date(item.get("decision_date")) or ""]
+    parts = [
+        item.get("agency") or item.get("tribunal_name") or item.get("source") or "",
+        _format_date(item.get("decision_date")) or "",
+    ]
     return " ".join(part for part in parts if part).strip() or "국가법령정보센터"
 
 
@@ -79,8 +95,17 @@ def _normalize_public_result(item: dict[str, Any]) -> dict[str, Any]:
         or item.get("promulgation_date")
         or item.get("effective_date")
         or item.get("disposition_date")
+        or item.get("date")
     )
-    snippet = item.get("summary") or item.get("holding") or item.get("decision_type") or item.get("short_name") or ""
+    snippet = (
+        item.get("summary")
+        or item.get("raw_text")
+        or item.get("full_text")
+        or item.get("holding")
+        or item.get("decision_type")
+        or item.get("short_name")
+        or ""
+    )
 
     return {
         "id": item.get("id") or item.get("serial_no") or item.get("mst") or item.get("law_id"),
@@ -91,7 +116,7 @@ def _normalize_public_result(item: dict[str, Any]) -> dict[str, Any]:
         "date": _format_date(date_value),
         "content": snippet,
         "detail_link": item.get("detail_link"),
-        "reference": item.get("case_no") or item.get("mst") or item.get("law_id") or item.get("serial_no"),
+        "reference": item.get("case_no") or item.get("mst") or item.get("law_id") or item.get("serial_no") or item.get("id"),
     }
 
 

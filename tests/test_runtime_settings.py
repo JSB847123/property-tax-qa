@@ -49,12 +49,22 @@ def test_each_setting_can_be_updated_individually(
     assert getter() == value
 
 
+def test_provider_is_unset_when_no_key_or_selection_exists() -> None:
+    status = runtime_settings.get_settings_status()
+
+    assert runtime_settings.get_llm_provider() == ''
+    assert status['llm_provider']['active'] is None
+    assert status['llm_provider']['configured'] is False
+    assert status['llm_provider']['selected'] is None
+
+
 @pytest.mark.parametrize(('persist', 'expected_source', 'expected_saved'), [(False, 'memory', False), (True, 'file', True)])
 @pytest.mark.parametrize('provider', ['anthropic', 'openai', 'gemini', 'glm'])
 def test_provider_can_be_selected_individually(provider: str, persist: bool, expected_source: str, expected_saved: bool) -> None:
     status = runtime_settings.update_settings(llm_provider=provider, persist=persist)
 
     assert status['llm_provider']['active'] == provider
+    assert status['llm_provider']['configured'] is False
     assert status['llm_provider']['selected'] == provider
     assert status['llm_provider']['source'] == expected_source
     assert status['llm_provider']['saved'] is expected_saved
@@ -79,6 +89,7 @@ def test_session_settings_are_applied_without_persistence() -> None:
     assert status['anthropic']['source'] == 'memory'
     assert status['anthropic']['saved'] is False
     assert status['llm_provider']['active'] == 'anthropic'
+    assert status['llm_provider']['configured'] is True
     assert runtime_settings.get_anthropic_api_key() == 'temp-anthropic-key'
     assert runtime_settings.SETTINGS_PATH.exists() is False
 
@@ -91,6 +102,7 @@ def test_saved_settings_are_persisted_to_file() -> None:
     assert status['openai']['saved'] is True
     assert status['law_oc']['configured'] is True
     assert status['llm_provider']['active'] == 'openai'
+    assert status['llm_provider']['configured'] is True
     assert runtime_settings.get_openai_api_key() == 'saved-openai-key'
     assert runtime_settings.get_law_oc() == 'saved-law-oc'
     assert runtime_settings.SETTINGS_PATH.exists() is True

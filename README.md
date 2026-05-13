@@ -3,7 +3,7 @@
 취득세·재산세 질의를 위한 실무형 RAG 프로젝트입니다. 내부 실무자료와 공개 법률자료를 함께 검색해 답변하고, 참조 출처 즐겨찾기, 최근 질의응답 유지, 대량 문서 등록까지 한 화면에서 다룰 수 있습니다.
 
 ## 주요 기능
-- 공개 검색: 판례, 법령, 심판례를 `law.go.kr` 공개 데이터로 조회
+- 공개 검색: 판례, 법령, 심판례를 `law.go.kr` 공개 데이터로 조회하고, `korean-law-mcp`가 설치되어 있으면 행정규칙·자치법규·조약·해석례·조세심판례·행정심판례까지 확장 조회
 - 내부 검색: 민원처리, 전산 적용 메모, 내부 이론을 SQLite와 ChromaDB에 저장·검색
 - 다중 LLM 지원: Anthropic, OpenAI, Gemini, GLM 전환 가능
 - 질의응답 UI: 공개 데이터 포함 토글, 참조 출처 더보기, 최근 질의응답 3건 유지
@@ -14,7 +14,7 @@
 - 백엔드: FastAPI
 - 프론트엔드: React + Vite + Tailwind CSS
 - 비공개 저장소: SQLite, ChromaDB
-- 공개자료 조회: `law.go.kr` API
+- 공개자료 조회: `law.go.kr` API, 선택적 `korean-law-mcp`
 - 런타임 연동설정: 화면에서 API 키와 `LAW_OC`를 임시 또는 영구 저장
 
 ## 빠른 시작
@@ -66,6 +66,19 @@ npm run dev
 
 - 국가법령정보 공동활용 안내: [https://open.law.go.kr/LSO/information/guide.do](https://open.law.go.kr/LSO/information/guide.do)
 - OPEN API 활용가이드: [https://open.law.go.kr/LSO/openApi/guideResult.do?htmlName=lsNwJoListGuide](https://open.law.go.kr/LSO/openApi/guideResult.do?htmlName=lsNwJoListGuide)
+
+## `korean-law-mcp` 확장 검색
+행정규칙, 자치법규, 조약, 해석례 등은 선택 기능입니다. 설치되어 있지 않아도 기존 판례·법령·심판례 검색은 그대로 동작합니다.
+
+```powershell
+npm install -g korean-law-mcp
+```
+
+환경변수로 실행 방식을 조정할 수 있습니다.
+
+- `KOREAN_LAW_MCP_COMMAND`: 기본값은 PATH의 `korean-law-mcp`
+- `KOREAN_LAW_MCP_USE_NPX=true`: 전역 설치 대신 `npx -y korean-law-mcp@latest` 사용
+- `KOREAN_LAW_MCP_DOMAINS`: `search_decisions`에서 조회할 영역, 기본값은 `interpretation,tax_tribunal,admin_appeal`
 
 ## 대량등록 형식
 ### CSV

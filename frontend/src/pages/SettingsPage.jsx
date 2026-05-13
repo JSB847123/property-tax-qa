@@ -167,13 +167,20 @@ function CredentialFieldCard({ field, value, mode, status, saving, onChange, onS
   )
 }
 
+function getProviderLabel(providerValue) {
+  if (!providerValue) {
+    return '미설정'
+  }
+  return providerOptions.find((item) => item.value === providerValue)?.label || providerValue
+}
+
 export default function SettingsPage() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [savingTarget, setSavingTarget] = useState('')
   const [clearing, setClearing] = useState(false)
   const [mode, setMode] = useState('session')
-  const [provider, setProvider] = useState('anthropic')
+  const [provider, setProvider] = useState('')
   const [credentialValues, setCredentialValues] = useState(() => ({ ...emptyCredentialValues }))
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -183,7 +190,7 @@ export default function SettingsPage() {
     try {
       const next = await fetchSettingsStatus()
       setStatus(next)
-      setProvider(next?.llm_provider?.selected || next?.llm_provider?.active || 'anthropic')
+      setProvider(next?.llm_provider?.selected || next?.llm_provider?.active || '')
       setError('')
     } catch (requestError) {
       setError(requestError.message)
@@ -197,7 +204,6 @@ export default function SettingsPage() {
   }, [])
 
   const modeDescription = useMemo(() => modeCards.find((item) => item.value === mode)?.description || '', [mode])
-  const activeProviderLabel = useMemo(() => providerOptions.find((item) => item.value === provider)?.label || provider, [provider])
 
   function updateCredentialValue(key, nextValue) {
     setCredentialValues((current) => ({
@@ -243,6 +249,12 @@ export default function SettingsPage() {
 
 
   async function handleSaveProvider() {
+    if (!provider) {
+      setError('답변 제공자를 선택해주세요.')
+      setMessage('')
+      return
+    }
+
     setSavingTarget('llm_provider')
     try {
       const response = await saveCredentials({
@@ -266,7 +278,7 @@ export default function SettingsPage() {
     try {
       const response = await clearSessionSettings()
       setStatus(response.settings)
-      setProvider(response.settings?.llm_provider?.selected || response.settings?.llm_provider?.active || 'anthropic')
+      setProvider(response.settings?.llm_provider?.selected || response.settings?.llm_provider?.active || '')
       setMessage(response.message)
       setError('')
     } catch (requestError) {
@@ -291,7 +303,7 @@ export default function SettingsPage() {
 
           <div className="rounded-[24px] border border-white/70 bg-white/80 px-5 py-4 shadow-panel sm:min-w-[320px]">
             <div className="text-sm font-semibold text-ink">현재 활성 제공자</div>
-            <div className="mt-2 text-lg font-semibold text-moss">{status?.llm_provider?.active ? providerOptions.find((item) => item.value === status.llm_provider.active)?.label || status.llm_provider.active : activeProviderLabel}</div>
+            <div className="mt-2 text-lg font-semibold text-moss">{getProviderLabel(status?.llm_provider?.active || provider)}</div>
             <div className="mt-2 text-xs leading-6 text-slate-500">
               이번 실행만 적용: 서버 재시작 전까지만 유지됩니다.
               <br />
@@ -353,7 +365,7 @@ export default function SettingsPage() {
                     <p className="text-sm font-semibold text-slate-700">답변 제공자만 따로 적용</p>
                     <p className="mt-2 text-xs leading-6 text-slate-500">API 키를 다시 입력하지 않아도 현재 사용할 제공자만 별도로 바꿔 저장할 수 있습니다.</p>
                   </div>
-                  <button type="button" className="primary-button px-4 py-3" onClick={handleSaveProvider} disabled={savingTarget === 'llm_provider'}>
+                  <button type="button" className="primary-button px-4 py-3" onClick={handleSaveProvider} disabled={savingTarget === 'llm_provider' || !provider}>
                     {savingTarget === 'llm_provider' ? '적용 중...' : mode === 'saved' ? '제공자 저장' : '제공자 적용'}
                   </button>
                 </div>
@@ -389,9 +401,13 @@ export default function SettingsPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-moss/70">현재 상태</p>
             <div className="mt-4 rounded-[24px] border border-moss/20 bg-moss/5 p-5">
               <div className="text-sm font-semibold text-slate-500">현재 활성 답변 제공자</div>
-              <div className="mt-2 text-xl font-semibold text-ink">{providerOptions.find((item) => item.value === status?.llm_provider?.active)?.label || 'Anthropic Claude'}</div>
+              <div className="mt-2 text-xl font-semibold text-ink">{getProviderLabel(status?.llm_provider?.active)}</div>
               <div className="mt-2 text-xs leading-6 text-slate-500">
-                {status?.llm_provider?.selected ? '사용자가 직접 선택한 제공자가 적용 중입니다.' : '명시적으로 선택하지 않으면 저장된 키를 기준으로 자동 선택됩니다.'}
+                {status?.llm_provider?.active
+                  ? status?.llm_provider?.selected
+                    ? '사용자가 직접 선택한 제공자가 적용 중입니다.'
+                    : '명시적으로 선택하지 않으면 저장된 키를 기준으로 자동 선택됩니다.'
+                  : 'API Key를 입력하거나 제공자를 선택하면 활성화됩니다.'}
               </div>
             </div>
             <div className="mt-4 space-y-3">

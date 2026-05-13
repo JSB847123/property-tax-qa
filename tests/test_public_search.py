@@ -13,6 +13,14 @@ from app import rag
 from app.routers import chat as chat_router
 
 
+@pytest.fixture(autouse=True)
+def disable_extended_public_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_search_extended_public(query: str, max_results: int) -> list[dict[str, str]]:
+        return []
+
+    monkeypatch.setattr(rag, 'search_extended_public', fake_search_extended_public)
+
+
 def test_build_public_search_queries_adds_tax_expansions() -> None:
     queries = rag._build_public_search_queries('부담부증여 관련 판례')
 
@@ -74,6 +82,40 @@ async def test_search_public_results_uses_tax_expansion_when_original_query_is_e
     tribunal_queries = [query for source, query in calls if source == 'tribunal']
     assert tribunal_queries[:2] == ['부담부증여 관련 판례', '부담부증여']
     assert '부담부증여 취득세' in tribunal_queries
+
+
+@pytest.mark.anyio
+async def test_search_public_results_includes_extended_mcp_sources(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_search_precedents(query: str, max_results: int) -> list[dict[str, str]]:
+        return []
+
+    async def fake_search_statutes(query: str, max_results: int) -> list[dict[str, str]]:
+        return []
+
+    async def fake_search_tribunal(query: str, max_results: int) -> list[dict[str, str]]:
+        return []
+
+    async def fake_search_extended_public(query: str, max_results: int) -> list[dict[str, str]]:
+        return [
+            {
+                'source_type': 'admin_rule',
+                'id': 'rule-1',
+                'title': '지방세 운영기준',
+                'source': '행정안전부',
+                'summary': '취득세 과세표준 관련 행정규칙이다.',
+            }
+        ]
+
+    monkeypatch.setattr(rag, 'search_precedents', fake_search_precedents)
+    monkeypatch.setattr(rag, 'search_statutes', fake_search_statutes)
+    monkeypatch.setattr(rag, 'search_tribunal', fake_search_tribunal)
+    monkeypatch.setattr(rag, 'search_extended_public', fake_search_extended_public)
+
+    results = await rag._search_public_results('취득세 행정규칙')
+
+    assert results
+    assert results[0]['source_type'] == 'admin_rule'
+    assert results[0]['title'] == '지방세 운영기준'
 
 
 @pytest.mark.anyio
